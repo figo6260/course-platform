@@ -1,0 +1,115 @@
+diff --git a/crmeb/app/api/route/v1.php b/crmeb/app/api/route/v1.php
+index 6e6038cf..2c75071c 100644
+--- a/crmeb/app/api/route/v1.php
++++ b/crmeb/app/api/route/v1.php
+@@ -373,6 +373,13 @@ Route::group(function () {
+         Route::post('user/spread/apply/:id', 'v1.user.SpreadApplyController/applyPromoter')->name('申请分销员');//申请分销员
+     })->option(['mark' => 'spread', 'mark_name' => '分销员申请']);
+ 
++    Route::group(function () {
++        //课程学习（需登录）
++        Route::get('course/lesson/:id', 'v1.course.CourseController/lesson')->name('courseLesson')->option(['real_name' => '课时播放地址']);
++        Route::get('course/my', 'v1.course.CourseController/my')->name('courseMy')->option(['real_name' => '我的课程']);
++        Route::post('course/progress', 'v1.course.CourseController/progress')->name('courseProgress')->option(['real_name' => '保存学习进度']);
++    })->option(['mark' => 'course', 'mark_name' => '课程学习']);
++
+ })->middleware(\app\http\middleware\AllowOriginMiddleware::class)->middleware(\app\api\middleware\StationOpenMiddleware::class)->middleware(\app\api\middleware\AuthTokenMiddleware::class, true);
+ //未授权接口
+ Route::group(function () {
+@@ -567,6 +574,14 @@ Route::group(function () {
+ 
+     })->option(['mark' => 'crontab', 'mark_name' => '定时任务']);
+ 
++    Route::group(function () {
++        //课程公开接口
++        Route::get('course/list', 'v1.course.CourseController/list')->name('courseList')->option(['real_name' => '课程列表']);
++        Route::get('course/detail/:id', 'v1.course.CourseController/detail')->name('courseDetail')->option(['real_name' => '课程详情']);
++        Route::get('teacher/list', 'v1.course.CourseController/teacherList')->name('teacherList')->option(['real_name' => '老师列表']);
++        Route::get('teacher/detail/:id', 'v1.course.CourseController/teacherDetail')->name('teacherDetail')->option(['real_name' => '老师详情']);
++    })->option(['mark' => 'course', 'mark_name' => '课程公开']);
++
+ })->middleware(\app\http\middleware\AllowOriginMiddleware::class)
+     ->middleware(\app\api\middleware\StationOpenMiddleware::class)
+     ->middleware(\app\api\middleware\AuthTokenMiddleware::class, false);
+diff --git a/crmeb/app/event.php b/crmeb/app/event.php
+index 8257f109..6a1add2c 100644
+--- a/crmeb/app/event.php
++++ b/crmeb/app/event.php
+@@ -32,7 +32,7 @@ return [
+         'UserRegisterListener' => [\app\listener\user\RegisterListener::class], //用户注册后置事件
+         'WechatAuthListener' => [\app\listener\wechat\AuthListener::class], //用户授权后置事件
+         'OrderCreateAfterListener' => [\app\listener\order\OrderCreateAfterListener::class], //订单创建后置事件
+-        'OrderPaySuccessListener' => [\app\listener\order\OrderPaySuccessListener::class], //订单支付成功后置事件
++        'OrderPaySuccessListener' => [\app\listener\order\OrderPaySuccessListener::class, \app\listener\course\CoursePaySuccessListener::class], //订单支付成功后置事件
+         'OrderDeliveryListener' => [\app\listener\order\OrderDeliveryListener::class], //订单发货后置事件
+         'OrderTakeListener' => [\app\listener\order\OrderTakeListener::class], //订单收货后置事件
+         'OrderRefundCreateAfterListener' => [\app\listener\order\OrderRefundCreateAfterListener::class], //售后单生成后置事件
+diff --git a/crmeb/config/database.php b/crmeb/config/database.php
+index 36097530..5757e677 100644
+--- a/crmeb/config/database.php
++++ b/crmeb/config/database.php
+@@ -32,11 +32,11 @@ return [
+             // 服务器地址
+             'hostname'        => Env::get('database.hostname', '127.0.0.1'),
+             // 数据库名
+-            'database'        => Env::get('database.database', 'crmeb31'),
++            'database'        => 'crmeb',
+             // 用户名
+-            'username'        => Env::get('database.username', 'root'),
++            'username'        => 'crmeb',
+             // 密码
+-            'password'        => Env::get('database.password', 'root'),
++            'password'        => 'Crmeb_2026_DB',
+             // 端口
+             'hostport'        => Env::get('database.hostport', '3306'),
+             // 连接dsn
+diff --git a/template/uni-app/pages.json b/template/uni-app/pages.json
+index aa0677e3..bee9fbb2 100644
+--- a/template/uni-app/pages.json
++++ b/template/uni-app/pages.json
+@@ -74,8 +74,31 @@
+ 				}
+ 
+ 			}
++		},
++		{
++			"path": "pages/course/list",
++			"style": {
++				"navigationBarTitleText": "全部课程"
++			}
++		},
++		{
++			"path": "pages/course/detail",
++			"style": {
++				"navigationBarTitleText": "课程详情"
++			}
++		},
++		{
++			"path": "pages/course/play",
++			"style": {
++				"navigationBarTitleText": "课程播放"
++			}
++		},
++		{
++			"path": "pages/course/my",
++			"style": {
++				"navigationBarTitleText": "我的课程"
++			}
+ 		}
+-
+ 	],
+ 	// 模块分包
+ 	"subPackages": [
+@@ -1747,6 +1770,12 @@
+ 				"iconPath": "static/images/4-001.png",
+ 				"selectedIconPath": "static/images/4-002.png",
+ 				"text": "我的"
++			},
++			{
++				"pagePath": "pages/course/list",
++				"iconPath": "static/images/5-001.png",
++				"selectedIconPath": "static/images/5-002.png",
++				"text": "课程"
+ 			}
+ 		]
+ 	},
